@@ -1,0 +1,16 @@
+<network>
+  <name>k8s-lab</name>
+  <forward mode='nat'/>
+  <bridge name='virbr-k8s' stp='on' delay='0'/>
+  <domain name='lab.internal' localOnly='yes'/>
+  <dns>
+    <host ip='192.168.150.10'><hostname>api</hostname></host>
+    <host ip='192.168.150.11'><hostname>cp1</hostname></host>
+    <host ip='192.168.150.12'><hostname>cp2</hostname></host>
+    <host ip='192.168.150.13'><hostname>cp3</hostname></host>
+    <host ip='192.168.150.21'><hostname>w1</hostname></host>
+    <host ip='192.168.150.22'><hostname>w2</hostname></host>
+    <host ip='192.168.150.23'><hostname>w3</hostname></host>
+  </dns>
+  <ip address='192.168.150.1' netmask='255.255.255.0'/>
+</network>

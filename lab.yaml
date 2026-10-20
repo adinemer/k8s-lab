@@ -1,0 +1,17 @@
+lab: k8s-lab
+os: ubuntu-26.04 (cloud image)
+kubernetes: "1.35"        # N-2: latest minor is 1.37
+network:
+  name: k8s-lab
+  bridge: virbr-k8s
+  cidr: 192.168.150.0/24
+  gateway: 192.168.150.1
+  domain: lab.internal
+vip: { name: api, ip: 192.168.150.10 }
+nodes:
+  - { name: cp1, ip: 192.168.150.11, vcpu: 2, ram_gib: 4, disk_gib: 40 }
+  - { name: cp2, ip: 192.168.150.12, vcpu: 2, ram_gib: 4, disk_gib: 40 }
+  - { name: cp3, ip: 192.168.150.13, vcpu: 2, ram_gib: 4, disk_gib: 40 }
+  - { name: w1,  ip: 192.168.150.21, vcpu: 4, ram_gib: 8, disk_gib: 60 }
+  - { name: w2,  ip: 192.168.150.22, vcpu: 4, ram_gib: 8, disk_gib: 60 }
+  - { name: w3,  ip: 192.168.150.23, vcpu: 4, ram_gib: 8, disk_gib: 60 }
