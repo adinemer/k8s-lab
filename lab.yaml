@@ -1,9 +1,9 @@
 lab: k8s-lab
 os: ubuntu-26.04 (cloud image)
-kubernetes: "1.35"   
+kubernetes: "1.35"   # N-2: latest minor is 1.37
 cluster:
   pod_cidr: 10.244.0.0/16
-  service_cidr: 10.96.0.0/12    # N-2: latest minor is 1.37
+  service_cidr: 10.96.0.0/12    
 network:
   name: k8s-lab
   bridge: virbr-k8s
