@@ -1,0 +1,25 @@
+# kubeadm config for the k8s-lab HA control plane (stacked etcd).
+# Used once, on cp1:  sudo kubeadm init --config kubeadm-config.yaml --upload-certs
+# Values come from lab.yaml.
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: InitConfiguration
+localAPIEndpoint:
+  advertiseAddress: 192.168.150.11   # cp1's own address
+  bindPort: 6443
+nodeRegistration:
+  name: cp1
+  criSocket: unix:///run/containerd/containerd.sock
+---
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: ClusterConfiguration
+clusterName: k8s-lab
+kubernetesVersion: stable-1.35       # N-2, from lab.yaml
+controlPlaneEndpoint: api.lab.internal:6443   # the kube-vip VIP (192.168.150.10)
+networking:
+  dnsDomain: cluster.local
+  podSubnet: 10.244.0.0/16
+  serviceSubnet: 10.96.0.0/12
+apiServer:
+  certSANs:
+    - api.lab.internal
+    - 192.168.150.10
