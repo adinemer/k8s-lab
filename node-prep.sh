@@ -12,7 +12,7 @@
 #   2. kernel modules overlay + br_netfilter (now and after reboot)
 #   3. sysctls for bridged traffic and IP forwarding
 #   4. containerd 2.x, systemd cgroups, crictl pointed at it
-#   5. kubeadm / kubelet / kubectl from the v1.35 repo, held
+#   5. kubeadm / kubelet / kubectl / cri-tools from the v1.35 repo, held
 
 set -euo pipefail
 
@@ -112,8 +112,8 @@ if write_file "$list" "deb [signed-by=$key] $repo /"; then
   apt-get update -qq
 fi
 
-pkgs=(kubelet kubeadm kubectl)
-if ! dpkg -s kubeadm kubelet kubectl >/dev/null 2>&1; then
+pkgs=(kubelet kubeadm kubectl cri-tools)
+if ! dpkg -s "${pkgs[@]}" >/dev/null 2>&1; then
   apt-get install -y -qq "${pkgs[@]}" >/dev/null
   log "installed ${pkgs[*]}"
 fi
