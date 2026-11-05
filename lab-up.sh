@@ -4,6 +4,8 @@
 #   ./lab-up.sh cp2          create only cp2
 #   ./lab-up.sh --spec kthw.yaml   use another spec file
 # A VM that already exists is skipped, so running it twice is safe.
+# On a bare host it first creates the libvirt network from network.xml and
+# downloads the base image; both are skipped when they already exist.
 
 source "$(dirname "$0")/lib.sh"
 
@@ -21,15 +23,47 @@ IMAGE="${IMAGE:-/var/lib/libvirt/images/ubuntu-26.04-server-cloudimg-amd64.img}"
 PUBKEY_FILE="${SSH_PUBKEY:-$HOME/.ssh/id_ed25519.pub}"
 OSINFO="${OSINFO:-ubuntu24.04}"           # only tunes virtual hardware defaults
 
+IMAGE_URL="${IMAGE_URL:-https://cloud-images.ubuntu.com/releases/26.04/release/ubuntu-26.04-server-cloudimg-amd64.img}"
+NET_XML="$LAB_DIR/network.xml"
+
 [[ -n "$NET_NAME" && -n "$GATEWAY" && -n "$PREFIX" ]] || die "network section incomplete in $SPEC"
+
+SEED_TMP="$(mktemp -d)"
+trap 'rm -rf "$SEED_TMP"' EXIT
+
+# 0. Host prerequisites. Each is created only if missing.
+#    a. The libvirt network: defined from network.xml, started, set to autostart.
+if ! "${VIRSH[@]}" net-info "$NET_NAME" >/dev/null 2>&1; then
+  grep -q "<name>$NET_NAME</name>" "$NET_XML" || die "$NET_XML does not define network $NET_NAME"
+  say "defining network $NET_NAME from $(basename "$NET_XML")"
+  "${VIRSH[@]}" net-define "$NET_XML" >/dev/null
+fi
+if ! "${VIRSH[@]}" net-info "$NET_NAME" | grep -q '^Active:.*yes'; then
+  say "starting network $NET_NAME"
+  "${VIRSH[@]}" net-start "$NET_NAME" >/dev/null
+fi
+"${VIRSH[@]}" net-autostart "$NET_NAME" >/dev/null
+
+#    b. The base image: downloaded, checked against Ubuntu's SHA256SUMS, installed.
+if ! sudo test -f "$IMAGE"; then
+  IMG_FILE="$(basename "$IMAGE_URL")"
+  say "downloading $IMG_FILE"
+  curl -fL --progress-bar -o "$SEED_TMP/$IMG_FILE" "$IMAGE_URL"
+  curl -fsSL -o "$SEED_TMP/SHA256SUMS" "$(dirname "$IMAGE_URL")/SHA256SUMS"
+  WANT="$(awk -v f="$IMG_FILE" '$2 == f || $2 == "*" f { print $1 }' "$SEED_TMP/SHA256SUMS")"
+  [[ -n "$WANT" ]] || die "$IMG_FILE not listed in SHA256SUMS"
+  GOT="$(sha256sum "$SEED_TMP/$IMG_FILE" | awk '{ print $1 }')"
+  [[ "$GOT" == "$WANT" ]] || die "checksum mismatch for $IMG_FILE"
+  say "checksum OK, installing to $IMAGE"
+  sudo install -m 0644 "$SEED_TMP/$IMG_FILE" "$IMAGE"
+  rm -f "$SEED_TMP/$IMG_FILE"
+fi
 sudo test -f "$IMAGE" || die "base image not found: $IMAGE"
 [[ -f "$PUBKEY_FILE" ]] || die "SSH public key not found: $PUBKEY_FILE (set SSH_PUBKEY=...)"
 PUBKEY="$(cat "$PUBKEY_FILE")"
 command -v xorrisofs >/dev/null || die "xorrisofs not found; install it with: sudo dnf install xorriso"
 
 sudo mkdir -p "$DISK_DIR"
-SEED_TMP="$(mktemp -d)"
-trap 'rm -rf "$SEED_TMP"' EXIT
 
 NODES="$(selected_nodes)"              # stops here if a name is wrong
 while read -r NAME IP VCPU RAM_GIB DISK_GIB; do
