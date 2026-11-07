@@ -38,7 +38,7 @@ if ! "${VIRSH[@]}" net-info "$NET_NAME" >/dev/null 2>&1; then
   say "defining network $NET_NAME from $(basename "$NET_XML")"
   "${VIRSH[@]}" net-define "$NET_XML" >/dev/null
 fi
-if ! "${VIRSH[@]}" net-info "$NET_NAME" | grep -q '^Active:.*yes'; then
+if [[ ! "$("${VIRSH[@]}" net-info "$NET_NAME")" =~ Active:[[:space:]]+yes ]]; then
   say "starting network $NET_NAME"
   "${VIRSH[@]}" net-start "$NET_NAME" >/dev/null
 fi
@@ -142,6 +142,20 @@ SSH_CONFIG="$LAB_DIR/ssh-config"
   done < <(all_nodes)
 } > "$SSH_CONFIG"
 
+# 5. Make ssh read that file. Its Include must be the first line of ~/.ssh/config:
+#    an Include placed after a Host block only applies inside that block. Any
+#    older k8s-lab Include (for example from an earlier repo location) is removed.
+USER_SSH="$HOME/.ssh/config"
+install -d -m 700 "$HOME/.ssh"
+touch "$USER_SSH"
+if [[ "$(head -n 1 "$USER_SSH")" != "Include $SSH_CONFIG" ]]; then
+  {
+    echo "Include $SSH_CONFIG"
+    grep -vxF "Include $SSH_CONFIG" "$USER_SSH" | grep -v '^Include .*k8s-lab/ssh-config$' || true
+  } > "$USER_SSH.new"
+  install -m 600 "$USER_SSH.new" "$USER_SSH"
+  rm -f "$USER_SSH.new"
+  say "added 'Include $SSH_CONFIG' as the first line of $USER_SSH"
+fi
+
 say "done. VMs need about a minute to boot. Then: ssh cp1"
-grep -q "Include $SSH_CONFIG" "$HOME/.ssh/config" 2>/dev/null ||
-  say "one-time setup: add this as the FIRST line of ~/.ssh/config:  Include $SSH_CONFIG"
