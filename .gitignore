@@ -18,3 +18,4 @@ _site/
 Gemfile.lock
 ssh-config
 kubeadm-init.log
+backups/
