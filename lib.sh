@@ -1,5 +1,5 @@
-# lib.sh - shared helpers for lab-up.sh, lab-down.sh, snapshot-all.sh, revert-all.sh.
-# Not run directly; the other scripts load it with "source".
+# lib.sh - shared helpers for the lab scripts (lab-up, lab-down, lab-start, lab-shutdown,
+# snapshot-all, revert-all, etcd-backup). Not run directly; they load it with "source".
 
 set -euo pipefail
 
@@ -63,3 +63,23 @@ selected_nodes() {
 
 # vm_exists NAME: true if libvirt already has a VM with that name.
 vm_exists() { "${VIRSH[@]}" dominfo "$1" >/dev/null 2>&1; }
+
+# vm_state NAME: prints the VM's libvirt state, for example "running" or "shut off".
+vm_state() { "${VIRSH[@]}" domstate "$1" 2>/dev/null | head -n 1; }
+
+# lab_dns: send *.lab.internal lookups from the host to libvirt's DNS on the lab
+# bridge. resolvectl settings last only as long as the bridge, which libvirt
+# recreates whenever the network starts (a host reboot included), so lab-up.sh
+# and lab-start.sh run this every time.
+lab_dns() {
+  local bridge gateway domain
+  bridge="$(net_get bridge)"; gateway="$(net_get gateway)"; domain="$(net_get domain)"
+  [[ -n "$bridge" && -n "$gateway" && -n "$domain" ]] || die "network bridge, gateway or domain missing in $SPEC"
+  say "routing ~$domain lookups to $gateway on $bridge"
+  sudo resolvectl dns "$bridge" "$gateway"
+  sudo resolvectl domain "$bridge" "~$domain"
+}
+
+# cp_nodes / worker_nodes: node names from the spec; cp* names are control plane.
+cp_nodes()     { all_nodes | awk '$1 ~ /^cp/  { print $1 }'; }
+worker_nodes() { all_nodes | awk '$1 !~ /^cp/ { print $1 }'; }

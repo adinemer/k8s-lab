@@ -6,6 +6,7 @@
 # A VM that already exists is skipped, so running it twice is safe.
 # On a bare host it first creates the libvirt network from network.xml and
 # downloads the base image; both are skipped when they already exist.
+# Every run also routes *.lab.internal lookups on the host to the lab DNS.
 
 source "$(dirname "$0")/lib.sh"
 
@@ -43,6 +44,7 @@ if [[ ! "$("${VIRSH[@]}" net-info "$NET_NAME")" =~ Active:[[:space:]]+yes ]]; th
   "${VIRSH[@]}" net-start "$NET_NAME" >/dev/null
 fi
 "${VIRSH[@]}" net-autostart "$NET_NAME" >/dev/null
+lab_dns                                   # host DNS for *.lab.internal (lib.sh)
 
 #    b. The base image: downloaded, checked against Ubuntu's SHA256SUMS, installed.
 if ! sudo test -f "$IMAGE"; then
