@@ -23,3 +23,22 @@ apiServer:
   certSANs:
     - api.lab.internal
     - 192.168.150.10
+
+# Metrics endpoints on all interfaces, so kube-prometheus-stack can scrape them (P0-08).
+controllerManager:
+  extraArgs:
+    - name: bind-address
+      value: "0.0.0.0"
+scheduler:
+  extraArgs:
+    - name: bind-address
+      value: "0.0.0.0"
+etcd:
+  local:
+    extraArgs:
+      - name: listen-metrics-urls
+        value: http://0.0.0.0:2381
+---
+apiVersion: kubeproxy.config.k8s.io/v1alpha1
+kind: KubeProxyConfiguration
+metricsBindAddress: 0.0.0.0:10249
